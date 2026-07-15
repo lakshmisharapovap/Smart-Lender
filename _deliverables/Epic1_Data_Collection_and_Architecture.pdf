@@ -1,0 +1,148 @@
+## Overview
+Smart Lender is a practical, production-oriented loan decision assistant. This Epic documents what we collected, why it matters for model development, and how the project structure supports reproducible ML engineering. The text below explains decisions in plain language and highlights what an engineer or reviewer will need to reproduce the results.
+
+Summary:
+
+- We collected a single, well-structured loan application dataset that contains the features needed to predict approval outcomes. The dataset is stored under `DATASET/` so raw data remains separate from code and artifacts.
+- The architecture favors separation of concerns: user interface and runtime code live under `Flask/`, while development assets (notebooks, experiments) remain under `Training/`. This reduces accidental coupling between research and production code.
+- This deliverable is intentionally specific: it lists file names, the schema, and exactly what was verified so a reviewer can re-run the verification steps without ambiguity.
+
+---
+
+## 1) Download the Dataset
+
+### Source
+- Dataset downloaded from Google Drive:
+  - https://drive.google.com/drive/folders/1fOen6--02V7Ka6E24R8lPAAZ8V0vnENI?usp=sharing
+
+### Files Collected
+- `DATASET/loan_prediction.csv`
+- `DATASET/loan_prediction.xlsx`
+- `DATASET/loan_prediction(1).csv`
+
+### Verification
+- The files open successfully and contain the expected loan prediction columns.
+- Dataset columns:
+  - `Loan_ID`
+  - `Gender`
+  - `Married`
+  - `Dependents`
+  - `Education`
+  - `Self_Employed`
+  - `ApplicantIncome`
+  - `CoapplicantIncome`
+  - `LoanAmount`
+  - `Loan_Amount_Term`
+  - `Credit_History`
+  - `Property_Area`
+  - `Loan_Status`
+
+### Purpose
+- This dataset is the foundation for:
+  - exploratory data analysis (EDA)
+  - data cleaning and preprocessing
+  - training classification models such as Decision Tree, Random Forest, KNN, and XGBoost
+- Keeping the dataset in a dedicated `DATASET/` folder separates raw data from code and deployment artifacts.
+
+---
+
+## 2) Defining the Application Architecture
+
+### Proposed Project Structure
+```
+SmartLender/
+├── DATASET/
+│   ├── loan_prediction.csv
+│   ├── loan_prediction.xlsx
+│   └── loan_prediction(1).csv
+├── Flask/
+│   ├── static/            # CSS, JavaScript, images
+│   ├── templates/         # HTML pages for the web UI
+│   ├── app.py             # Flask app and prediction API
+│   ├── rdf.pkl            # Saved trained model artifact
+│   ├── scale1.pkl         # Saved scaler or preprocessing object
+│   └── requirements.txt   # runtime dependencies
+├── IBM/                   # IBM Cloud deployment configuration files
+├── Training/
+│   └── Loan Prediction using ML.ipynb  # EDA, preprocessing, model training
+└── _deliverables/
+    └── Epic1_Data_Collection_and_Architecture.md
+```
+
+### Three-tier Architecture
+- **Presentation Tier**
+  - Location: `Flask/templates/` and `Flask/static/`
+  - Purpose: user interface for applicant input and prediction results
+  - Example files: `index.html`, `result.html`, CSS, JavaScript
+
+- **Backend/API Tier**
+  - Location: `Flask/app.py`
+  - Purpose: receives form input, preprocesses data, loads the trained model, and returns approval predictions
+  - Example behavior: handle HTTP `GET` for form display and `POST` for prediction requests
+
+- **AI/ML Service Tier**
+  - Location: `Training/Loan Prediction using ML.ipynb`, plus model artifacts in `Flask/`
+  - Purpose: offline model development, training, evaluation, and artifact serialization
+  - Contains: data cleaning, feature engineering, model comparison, XGBoost model export
+
+### Why this Architecture is Correct
+- **Separation of concerns:** data collection and model training are isolated from the user-facing Flask app.
+- **Maintainability:** UI changes do not require retraining the model, and model updates do not require rewriting the frontend.
+- **Scalability:** new models or preprocessing pipelines can be added under `Training/` and exported as artifacts without affecting the app structure.
+- **Deployment readiness:** the app can be deployed to IBM Cloud with only the `Flask/` folder and required artifacts, while the training notebook stays in `Training/`.
+
+### Benefits of the Design
+- `DATASET/` is isolated from code, so dataset updates remain independent.
+- `Flask/` acts as the runtime application layer and only loads pre-trained artifacts.
+- `IBM/` contains deployment-specific files, preventing accidental changes to core code logic.
+- `Training/` captures the full model development workflow and provides a reproducible record of experiments.
+
+### Architecture Diagram
+```
+[User] --> [Flask Web UI] --> [Flask Backend / app.py] --> [Saved Model + Preprocessor]
+                               ^
+                               |
+                          [Training Notebook]
+```
+
+---
+
+## What was Given
+- Epic 1 consists of two sub-tasks:
+  1. Download the dataset from the shared Drive link.
+  2. Define the application architecture and project structure for Smart Lender.
+- The project context is a Flask-based ML web app using loan prediction data.
+- The dataset files are:
+  - `loan_prediction.csv`
+  - `loan_prediction.xlsx`
+  - `loan_prediction(1).csv`
+
+## What was Understood
+- The dataset must be collected, verified, and stored in a dedicated `DATASET/` folder.
+- The architecture should follow a modular, three-tier design with clear separation of UI, backend, and ML artifacts.
+- The deliverable should document both the data collection and the architecture design clearly.
+
+## What was Done
+- Verified the dataset files exist in `DATASET/`.
+- Confirmed the files are readable and contain the expected loan prediction columns.
+- Documented the download source and file names.
+- Defined a recommended project directory layout that supports maintainability and future extension.
+- Explained the three-tier architecture for Smart Lender.
+- Produced this deliverable document for Epic 1.
+
+## What was Obtained
+- Dataset verification:
+  - `DATASET/loan_prediction.csv`
+  - `DATASET/loan_prediction.xlsx`
+  - `DATASET/loan_prediction(1).csv`
+- Dataset schema includes all required features for loan prediction.
+- Architecture document saved at `_deliverables/Epic1_Data_Collection_and_Architecture.md`.
+
+## What is Expected
+- Submit this document as the Epic 1 deliverable.
+- The Epic 1 criteria are now met by:
+  - collecting and verifying the dataset,
+  - defining the application architecture,
+  - documenting the folder structure,
+  - explaining the three-tier design,
+  - and providing a ready-to-submit report.

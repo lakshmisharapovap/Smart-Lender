@@ -1,0 +1,268 @@
+"""
+Convert Epic 4 Markdown Report to PDF
+Simple text-based PDF generation
+"""
+
+import os
+import re
+from pathlib import Path
+
+from PIL import Image as PILImage
+
+def convert_md_to_pdf():
+    """Convert markdown to PDF using reportlab with proper formatting"""
+    
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Preformatted, Image as RLImage
+        from reportlab.lib import colors
+    except ImportError:
+        print("Installing reportlab...")
+        os.system('pip install reportlab -q')
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Preformatted, Image as RLImage
+        from reportlab.lib import colors
+    
+    # Define paths
+    deliverables_path = Path(__file__).resolve().parent
+    md_file = deliverables_path / 'Epic4_Model_Building.md'
+    pdf_file = deliverables_path / 'Epic4_Model_Building.pdf'
+    
+    # Read markdown file
+    with open(md_file, 'r', encoding='utf-8') as f:
+        md_content = f.read()
+    
+    # Create PDF document
+    doc = SimpleDocTemplate(
+        str(pdf_file),
+        pagesize=letter,
+        rightMargin=0.75*inch,
+        leftMargin=0.75*inch,
+        topMargin=0.75*inch,
+        bottomMargin=0.75*inch
+    )
+    
+    # Create styles
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#2c3e50'),
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+    
+    heading2_style = ParagraphStyle(
+        'CustomHeading2',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=colors.HexColor('#34495e'),
+        spaceAfter=12,
+        spaceBefore=12,
+        fontName='Helvetica-Bold'
+    )
+    
+    heading3_style = ParagraphStyle(
+        'CustomHeading3',
+        parent=styles['Heading3'],
+        fontSize=12,
+        textColor=colors.HexColor('#34495e'),
+        spaceAfter=10,
+        fontName='Helvetica-Bold'
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['Normal'],
+        fontSize=10,
+        alignment=TA_JUSTIFY,
+        spaceAfter=10
+    )
+
+    bullet_style = ParagraphStyle(
+        'CustomBullet',
+        parent=body_style,
+        leftIndent=18,
+        firstLineIndent=-10,
+        spaceAfter=6,
+        leading=13
+    )
+
+    checklist_style = ParagraphStyle(
+        'CustomChecklist',
+        parent=body_style,
+        leftIndent=14,
+        firstLineIndent=-8,
+        spaceAfter=5,
+        leading=13
+    )
+
+    code_style = ParagraphStyle(
+        'CustomCode',
+        parent=styles['Code'],
+        fontName='Courier',
+        fontSize=8.5,
+        leading=10,
+        leftIndent=10,
+        spaceAfter=8
+    )
+
+    def clean_text(text):
+        """Remove markdown syntax that should not appear in the PDF."""
+        cleaned = text.replace('**', '')
+        cleaned = cleaned.replace('`', '')
+        cleaned = cleaned.replace('✅', '')
+        cleaned = cleaned.replace('✓', '')
+        cleaned = cleaned.replace('■', '')
+        cleaned = cleaned.replace('[x]', '✓')
+        cleaned = cleaned.replace('[X]', '✓')
+        cleaned = cleaned.replace('[ ]', '□')
+        cleaned = cleaned.replace('☐', '□')
+        cleaned = cleaned.replace('•', '&bull;')
+        cleaned = re.sub(r'^[-*]\s*', '', cleaned)
+        cleaned = re.sub(r'^#+\s*', '', cleaned)
+        cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+        return cleaned.strip()
+
+    def resolve_image_path(image_path):
+        """Return a PDF-friendly image path, converting GIFs to a first-frame PNG."""
+        if image_path.suffix.lower() != '.gif':
+            return image_path
+
+        png_path = image_path.with_name(f'{image_path.stem}_first_frame.png')
+        if png_path.exists() and png_path.stat().st_mtime >= image_path.stat().st_mtime:
+            return png_path
+
+        with PILImage.open(image_path) as image:
+            image.seek(0)
+            frame = image.convert('RGB')
+            frame.save(png_path, format='PNG')
+
+        return png_path
+    
+    # Story list to build PDF
+    story = []
+    
+    # Process markdown content
+    lines = md_content.split('\n')
+    in_code_block = False
+    code_block = []
+    image_pattern = re.compile(r'^!\[(.*?)\]\((.*?)\)$')
+    
+    for line in lines:
+        # Check for code blocks
+        if line.strip().startswith('```'):
+            if in_code_block:
+                # End code block
+                code_text = '\n'.join(code_block)
+                story.append(Preformatted(code_text, code_style))
+                story.append(Spacer(1, 0.1*inch))
+                code_block = []
+                in_code_block = False
+            else:
+                # Start code block
+                in_code_block = True
+            continue
+        
+        if in_code_block:
+            code_block.append(line)
+            continue
+        
+        orig_line = line
+        line = line.strip()
+        
+        if not line:
+            story.append(Spacer(1, 0.08*inch))
+            continue
+        
+        # Handle headers
+        if line.startswith('# '):
+            title = clean_text(line[2:].strip())
+            story.append(Paragraph(title, title_style))
+            story.append(Spacer(1, 0.15*inch))
+            
+        elif line.startswith('## '):
+            heading = clean_text(line[3:].strip())
+            story.append(Paragraph(heading, heading2_style))
+            
+        elif line.startswith('### '):
+            heading = clean_text(line[4:].strip())
+            story.append(Paragraph(heading, heading3_style))
+            
+        elif line.startswith('#### '):
+            heading = clean_text(line[5:].strip())
+            story.append(Paragraph(heading, heading3_style))
+            
+        elif line.startswith('---'):
+            story.append(Spacer(1, 0.1*inch))
+        elif image_pattern.match(line):
+            image_match = image_pattern.match(line)
+            alt_text, image_name = image_match.groups()
+            image_path = (deliverables_path / image_name).resolve()
+
+            if image_path.exists():
+                try:
+                    pdf_image_path = resolve_image_path(image_path)
+                    image = RLImage(str(pdf_image_path))
+                    max_width = doc.width
+                    max_height = 4.5 * inch
+                    scale = min(max_width / image.imageWidth, max_height / image.imageHeight, 1)
+                    image.drawWidth = image.imageWidth * scale
+                    image.drawHeight = image.imageHeight * scale
+                    story.append(Spacer(1, 0.08 * inch))
+                    story.append(image)
+                    if alt_text:
+                        story.append(Paragraph(f"<i>{alt_text}</i>", body_style))
+                    story.append(Spacer(1, 0.12 * inch))
+                except Exception:
+                    story.append(Paragraph(f"Image: {image_name}", body_style))
+            else:
+                story.append(Paragraph(f"Image not found: {image_name}", body_style))
+            
+        elif line.startswith('- ['):
+            checkbox_text = clean_text(line)
+            checkbox_text = checkbox_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            story.append(Paragraph(f"{checkbox_text}", checklist_style))
+
+        elif line.startswith('- '):
+            # Bullet point - escape special characters
+            bullet_text = clean_text(line[2:].strip())
+            bullet_text = bullet_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            story.append(Paragraph(f"&#8226; {bullet_text}", bullet_style))
+            
+        elif not line.startswith('|'):
+            # Regular paragraph - escape special characters
+            text = clean_text(line)
+            text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            if text:
+                story.append(Paragraph(text, body_style))
+    
+    # Build PDF
+    try:
+        doc.build(story)
+        print(f'✓ PDF created successfully!')
+        print(f'  File: {pdf_file.name}')
+        print(f'  Location: {pdf_file}')
+        return True
+    except Exception as e:
+        print(f'✗ Error creating PDF: {e}')
+        import traceback
+        traceback.print_exc()
+        return False
+
+if __name__ == '__main__':
+    success = convert_md_to_pdf()
+    if success:
+        print('\nPDF conversion completed successfully!')
+    else:
+        print('\nPDF conversion failed. Markdown file still available.')

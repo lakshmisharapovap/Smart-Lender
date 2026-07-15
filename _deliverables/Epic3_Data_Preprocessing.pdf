@@ -1,0 +1,83 @@
+## Overview
+This phase converts raw loan application records into a machine-learning-ready dataset. The write-up below explains the exact transformations applied (mappings, imputation rules, resampling strategy, and scaling), why each was chosen, and how to reuse the same transformations at inference time.
+
+Summary:
+
+- Categorical variables were mapped to numeric encodings with explicit mappings so the transformation is deterministic and reviewable.
+- Missing numeric values were imputed with column means to preserve overall scale; categorical gaps used mode imputation to keep category semantics intact. Remaining nulls were filled with zeros as a last-resort safety net.
+- The minority class was augmented with SMOTE to synthetically create plausible records; we balanced before scaling so the synthetic samples were created on raw numeric space and then standardized.
+- The `StandardScaler` fitted on the balanced training data was saved as `scaler_epic3.pkl` to guarantee the same preprocessing is applied during inference.
+
+---
+
+## 1) Checking and Handling Values
+- Categorical encoding applied:
+  - `Gender`: Male=0, Female=1
+  - `Married`: No=0, Yes=1
+  - `Education`: Not Graduate=0, Graduate=1
+  - `Self_Employed`: No=0, Yes=1
+  - `Property_Area`: Rural=0, Semiurban=1, Urban=2
+  - `Loan_Status`: N=0, Y=1
+- `Dependents`: converted '3+' to 3 and cast to numeric.
+- Missing values treatment:
+  - Numeric features: filled with mean.
+  - Categorical features: filled with mode.
+  - Any remaining missing values filled with 0.
+
+## 2) Balancing the Dataset (SMOTE)
+- The dataset's `Loan_Status` class distribution was inspected and SMOTE (Synthetic Minority Over-sampling Technique) was applied to generate synthetic minority-class samples using K-Nearest Neighbors. SMOTE increases the minority class size to match the majority class to reduce bias during training.
+
+Original and SMOTE-balanced class distributions are shown below:
+
+![Original class distribution](epic3_original_class_dist.png)
+
+![SMOTE balanced class distribution](epic3_balanced_class_dist.png)
+
+## 3) Scaling the dataset
+
+- Feature scaling was applied using `StandardScaler` and only to the input features (X), not the target `Loan_Status`. Scaling improves models that rely on distances (e.g., `KNN`) or gradient-based optimization (e.g., `Logistic Regression`).
+- The numeric features scaled were: `ApplicantIncome`, `CoapplicantIncome`, `LoanAmount`, and `Loan_Amount_Term` (when present).
+
+Below are the distributions before and after scaling (values shown for input features only):
+
+![Before scaling distributions](epic3_scaling_before.png)
+
+![After scaling distributions](epic3_scaling_after.png)
+
+Notes:
+- Scaling was applied after SMOTE balancing and before the train/test split. The saved scaler (`scaler_epic3.pkl`) is included in the deliverables for use during model inference.
+- Only `X` (input features) were transformed; `Loan_Status` was preserved as the unscaled target variable.
+
+## 4) Train / Test split
+
+- After scaling, the dataset was split into input features (`X`) and the target variable (`y`). `X` contains all columns except the target `Loan_Status` and the identifier column `Loan_ID` (if present). `y` is the unscaled `Loan_Status`.
+- The split uses scikit-learn's `train_test_split()` with the following parameters in this project:
+  - `test_size`: 0.20 (20% held out for testing)
+  - `random_state`: 42 (seed for reproducibility)
+  - `stratify`: `y` (preserve class balance in train/test)
+
+- Resulting files saved in `_deliverables`:
+  - `X_train_epic3.csv`, `X_test_epic3.csv`
+  - `y_train_epic3.csv`, `y_test_epic3.csv`
+
+Notes:
+- Using `stratify=y` ensures the class proportion of `Loan_Status` is maintained between training and test sets, which is important after applying SMOTE to the full dataset.
+- You can change the `test_size` or `random_state` by editing `Training/Epic3_Preprocessing.py` if a different split is desired.
+
+## 3) Scaling the Data
+- Numeric features scaled using `StandardScaler` for features: `ApplicantIncome`, `CoapplicantIncome`, `LoanAmount`, `Loan_Amount_Term`.
+- The scaler object was saved to `_deliverables/scaler_epic3.pkl` for reuse in inference.
+
+## 4) Splitting Data into Training and Test Sets
+- The balanced dataset was shuffled and split into training (80%) and test (20%) sets using stratified split on `Loan_Status`.
+- Saved files in `_deliverables/`:
+  - `df_balanced_epic3.csv` — balanced full dataset
+  - `X_train_epic3.csv`, `X_test_epic3.csv`, `y_train_epic3.csv`, `y_test_epic3.csv`
+  - `scaler_epic3.pkl`
+
+---
+
+## Notes
+- Preprocessing artifacts and plots are in `_deliverables/`.
+- The preprocessing script used: `Training/Epic3_Preprocessing.py`.
+

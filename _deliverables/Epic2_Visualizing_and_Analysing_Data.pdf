@@ -1,0 +1,101 @@
+## Overview
+This document contains a concise, human-friendly walkthrough of the exploratory data analysis performed for Smart Lender. It focuses on actionable observations, not just charts: each visualization is followed by a short interpretation and an explicit recommendation for preprocessing or feature engineering.
+
+Summary:
+
+- We inspected the dataset for missingness, distributional shape, and obvious errors. The missing-value report highlights the columns that require imputation before model training.
+- Univariate charts helped identify skewed numeric features that will benefit from scaling or transformation; categorical counts indicated which dummy or ordinal encodings are appropriate.
+- Bivariate and multivariate views were used to check simple predictive signals and to identify potential confounders (for example, income vs. credit history). Each figure is accompanied by a short interpretation to help make modeling decisions reproducible.
+
+---
+
+## 1) Import and Read Dataset
+
+### Dataset Import
+- Dataset file: `DATASET/loan_prediction.csv`
+- Loaded using `pandas.read_csv()`.
+
+### Dataset Summary
+- Shape: (614, 13)
+- Columns: ['Loan_ID', 'Gender', 'Married', 'Dependents', 'Education', 'Self_Employed', 'ApplicantIncome', 'CoapplicantIncome', 'LoanAmount', 'Loan_Amount_Term', 'Credit_History', 'Property_Area', 'Loan_Status']
+- Missing values:
+```
+Loan_ID               0
+Gender               13
+Married               3
+Dependents           15
+Education             0
+Self_Employed        32
+ApplicantIncome       0
+CoapplicantIncome     0
+LoanAmount           22
+Loan_Amount_Term     14
+Credit_History       50
+Property_Area         0
+Loan_Status           0
+```
+
+### Sample Data
+![Dataset Head](epic2_dataset_head.png)
+
+### Missing Values Visualization
+![Missing Values](epic2_missing_values.png)
+
+### Status
+- Subtask 1: completed.
+- Output verification: dataset structure, columns, and missing values have been validated.
+
+---
+
+## 2) Univariate Analysis
+### Distribution plots (numeric features)
+
+The following distributions visualize individual continuous features using histograms with kernel density estimates.
+
+![Univariate Distributions](epic2_univariate_dist.png)
+
+### Count plots (categorical features)
+
+The following count plots show frequencies for categorical variables.
+
+![Univariate Counts](epic2_univariate_counts.png)
+
+### Observations
+
+- Applicant income exhibits a left-skewed distribution.
+- Credit history is a binary feature with values 0 and 1.
+- Gender and Education are categorical variables with two main categories each.
+- The frequency of one category is larger than the other for Gender and Education.
+
+These observations help identify feature distributions before preprocessing and modeling.
+
+## 3) Bivariate Analysis
+The bivariate analysis uses count plots to examine relationships between pairs of variables. The plots below visualize three comparisons: `Married` segmented by `Gender`, `Self_Employed` segmented by `Education`, and `Property_Area` segmented by `Loan_Amount_Term`.
+
+![Bivariate Counts](epic2_bivariate_counts.png)
+
+### Observations from Bivariate Analysis
+
+- Segmenting `Married` by `Gender` reveals demographic patterns in loan applications (e.g., married males form a large group of applicants).
+- Segmenting `Education` against `Self_Employed` shows that graduate applicants are more frequently recorded as not self-employed compared to the other category.
+- `Loan_Amount_Term` distributions vary across `Property_Area` categories — terms of 360 (and 180) days are common and appear across multiple property areas.
+
+These bivariate insights guide feature engineering and stratified sampling choices before modeling.
+
+## 4) Multivariate Analysis
+Multivariate analysis examines relationships between multiple features simultaneously. Below is a swarmplot showing `ApplicantIncome` distributions by `Gender`, colored by `Loan_Status` to reveal how income and gender interact with approval outcomes.
+
+![Multivariate Swarmplot](epic2_multivariate_swarm.png)
+
+### Observations from Multivariate Analysis
+
+- The swarmplot shows income clusters for each gender; many approved loans (`Y`) appear across income ranges but approvals are denser in higher income ranges.
+- Overlaps indicate that income alone doesn’t fully separate approval status; combined features (credit history, loan amount) will be used in modeling.
+
+These multivariate insights inform feature selection and modeling strategies.
+
+---
+
+### Notes
+- Section 1 is complete and documented with outputs.
+- Sections 2, 3, and 4 are placeholders waiting for the remaining subtasks.

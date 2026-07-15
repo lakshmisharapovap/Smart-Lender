@@ -1,0 +1,22 @@
+# SmartLender Voiceover Script
+
+## Intro
+Hello and welcome to SmartLender, an AI-powered project designed to improve the loan approval process using machine learning.
+
+## Problem
+Traditional loan approval often involves manual review, which can be slow, inconsistent, and difficult to scale. SmartLender aims to solve this by building a data-driven prediction system.
+
+## Data and Analysis
+The project begins with loan application data. We explored the dataset, studied its structure, and visualized important patterns such as missing values, distributions, and relationships between features.
+
+## Preprocessing
+Before training the model, the data was cleaned and transformed. Missing values were handled, categorical features were encoded, and numerical variables were scaled. The dataset was also balanced to improve model performance.
+
+## Model Building
+Several machine learning models were trained and compared, including Decision Tree, Random Forest, KNN, and XGBoost. Random Forest was selected as the best-performing model.
+
+## Application Development
+The trained model was connected to a web application so users can enter loan details and receive a prediction. This makes the project practical and ready for real-world use.
+
+## Final Message
+SmartLender demonstrates how machine learning can make financial decision-making faster, smarter, and more reliable. It combines data science, technology, and deployment into one complete solution.

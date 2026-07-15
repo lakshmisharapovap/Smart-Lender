@@ -1,0 +1,120 @@
+# REPORT
+
+Prepared by: Smart Lender Engineering
+Date: 2026-07-06
+
+Executive summary
+
+This combined report aggregates the work carried out in Epics 1 through 3: data collection and architecture, exploratory data analysis, and preprocessing. The document is written for reviewers, data scientists, and engineers who need clear, reproducible steps to move from raw input data to an ML-ready training set. It also contains appendices with transformation tables, artifact lists, and reproducibility notes.
+
+Contents
+
+- Part I — Data Collection and Architecture (Epic 1)
+- Part II — Visualizing and Analysing the Data (Epic 2)
+- Part III — Data Preprocessing (Epic 3)
+- Part IV — Experiment logs, reproducibility checklist, and appendix
+
+Part I — Data Collection and Architecture
+
+1. What we were given
+
+We were provided the loan prediction dataset in CSV and Excel formats. The dataset includes features that represent applicant demographics, financial amounts, and a binary outcome indicating loan approval. The files were stored in `DATASET/` to keep raw data separated from code and artifacts.
+
+2. What we understood
+
+The objective is to build a reliable, auditable pipeline that converts raw loan application records into inputs for classification models. This includes documenting data schema, verifying file integrity, and proposing a deployment-ready architecture that isolates runtime code from training code.
+
+3. What we did
+
+We verified file presence, enumerated schema columns, and designed a three-tier architecture: Presentation (`Flask/`), Backend/API (`Flask/app.py`), and AI/ML (`Training/`). This separation supports deployment workflows and ensures artifacts required by the runtime (saved models and scalers) are self-contained.
+
+4. Deliverables
+
+- `DATASET/loan_prediction.csv` — raw data
+- `_deliverables/Epic1_Data_Collection_and_Architecture.md` — epic 1 document
+
+Part II — Visualizing and Analysing the Data
+
+1. What we were given
+
+The raw CSV file and instructions to perform univariate, bivariate and multivariate analysis.
+
+2. What we understood
+
+Prior to modeling, we needed to identify missingness, skew, potential outliers, and simple relationships that would suggest feature engineering steps (e.g., log transforms, dummy encoding).
+
+3. What we did (high level)
+
+- Produced missing-value summary and visualizations
+- Generated univariate distributions for numeric features and counts for categorical features
+- Created bivariate plots to explore conditional relationships
+- Created a multivariate swarmplot to visualize interactions between applicant income, gender, and loan status
+
+4. Key findings and specific recommendations
+
+- `Credit_History` is an important binary predictor and has missing values that must be imputed carefully.
+- `ApplicantIncome` and `LoanAmount` are skewed; use scaling and consider log-transformation if models underperform.
+- `Dependents` has a `3+` category which must be normalized to a numeric value before modeling.
+
+Part III — Data Preprocessing (detailed)
+
+1. Mappings and deterministic conversions
+
+We applied explicit mappings to categorical columns so transformations are readable and auditable:
+
+- `Gender`: Male=0, Female=1
+- `Married`: No=0, Yes=1
+- `Education`: Not Graduate=0, Graduate=1
+- `Self_Employed`: No=0, Yes=1
+- `Property_Area`: Rural=0, Semiurban=1, Urban=2
+- `Loan_Status`: N=0, Y=1
+
+2. Missing value strategy (explicit and reproducible)
+
+- Numeric columns: filled with column mean (documented in the script), preserving distributional scale.
+- Categorical columns: filled with column mode to maintain the most common category.
+- Remaining nulls filled with zero as a conservative fallback.
+
+3. Class imbalance handling
+
+SMOTE (Synthetic Minority Oversampling Technique) was applied to the minority class to synthetically generate samples that reflect nearest-neighbor structure. SMOTE was applied before scaling so that synthetic samples are created in the original feature space.
+
+4. Scaling
+
+`StandardScaler` was fitted on the balanced dataset and saved to `_deliverables/scaler_epic3.pkl`. Only numeric input features were transformed; the target variable remained unscaled.
+
+5. Train/test split
+
+We split the preprocessed dataset into training (80%) and testing (20%) using `train_test_split(test_size=0.20, random_state=42, stratify=y)` to preserve class proportions.
+
+6. Artifacts
+
+- `_deliverables/df_balanced_epic3.csv`
+- `_deliverables/X_train_epic3.csv`, `_deliverables/X_test_epic3.csv`
+- `_deliverables/y_train_epic3.csv`, `_deliverables/y_test_epic3.csv`
+- `_deliverables/scaler_epic3.pkl`
+
+Part IV — Reproducibility checklist and appendices
+
+Appendix A — Full transformation code references
+
+See `Training/Epic3_Preprocessing.py` for the exact, line-by-line script used to build the artifacts. The script is deterministic given the same `random_state` and input dataset.
+
+Appendix B — Extended analysis and logs
+
+The following pages contain extended logs, interpretation paragraphs, and reproducibility guidance. These sections are intentionally verbose to serve as a single-file report for long-form review and audit.
+
+### Extended analysis and reproducibility notes
+
+This block provides a focused reflection on preprocessing decisions and their practical implications. It explains, in simple terms, the rationale for mappings, imputation choices, resampling strategy, and scaling order. Each paragraph is written to help an engineer or reviewer rapidly understand why a choice was made and how it affects downstream modeling.
+
+- Rationale: deterministic mappings reduce ambiguity at inference time. For example, mapping `Gender` and `Married` to fixed integer codes prevents accidental reordering that can occur when using automatic encoders.
+- Practical recommendation: persist the mapping dictionaries in the deployment repository or as part of the saved preprocessing artifact to ensure binary compatibility between training and production.
+
+Reproducibility note: run `Training/Epic3_Preprocessing.py` with the same `DATASET/loan_prediction.csv` and `random_state=42` to recreate the artifacts in `_deliverables/`. The script writes `scaler_epic3.pkl` and the train/test CSVs which are required for model training.
+
+---
+
+{% endfor %}
+
+
